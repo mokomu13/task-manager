@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タスク管理 & 日報</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f7f7f5;--bg3:#f0f0ec;
+  --text:#1a1a1a;--text2:#666;--text3:#999;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.2);
+  --radius:8px;--radius-lg:12px;
+  --font:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;
+  --text:#f5f5f5;--text2:#aaa;--text3:#666;
+  --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+}}
+body{font-family:var(--font);background:var(--bg3);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+.app{max-width:900px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:16px;border-bottom:0.5px solid var(--border)}
+.app-title{font-size:18px;font-weight:600;letter-spacing:-0.01em}
+.app-title span{font-size:12px;font-weight:400;color:var(--text2);margin-left:8px}
+.tabs{display:flex;gap:2px;background:var(--bg2);border-radius:10px;padding:3px;margin-bottom:20px}
+.tab{flex:1;padding:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--text2);border-radius:8px;transition:all 0.15s}
+.tab.active{background:var(--bg);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.view{display:none}.view.active{display:block}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.btn{padding:7px 14px;font-size:13px;border:0.5px solid var(--border2);background:var(--bg);border-radius:var(--radius);cursor:pointer;color:var(--text);font-family:var(--font);transition:all 0.15s}
+.btn:hover{background:var(--bg2)}
+.btn-primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn-primary:hover{opacity:0.8}
+.btn-danger{border-color:#A32D2D;color:#A32D2D}
+.btn-danger:hover{background:#FCEBEB}
+select,input[type=text],input[type=date],textarea{font-size:13px;padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;font-family:var(--font)}
+select:focus,input:focus,textarea:focus{border-color:var(--text3)}
+textarea{resize:vertical;width:100%}
+.card{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:12px 16px;margin-bottom:6px;cursor:pointer;transition:background 0.12s}
+.card:hover{background:var(--bg2)}
+.card-header{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.card-name{font-size:14px;font-weight:500;flex:1;min-width:0}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.urgent-badge{background:#F7C1C1;color:#791F1F}
+.today-badge{background:#E1F5EE;color:#085041}
+.cat-badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.card-body{font-size:12px;color:var(--text2);margin-left:20px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-meta{font-size:12px;color:var(--text3);display:flex;gap:12px;margin-top:6px;align-items:center;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.today-link{margin-left:auto;cursor:pointer;font-size:12px;padding:2px 8px;border-radius:20px;border:0.5px solid var(--border);background:none;color:var(--text2);font-family:var(--font);transition:all 0.12s}
+.today-link:hover{background:var(--bg2)}
+.today-link.active{border-color:#1D9E75;color:#1D9E75}
+.section-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin:16px 0 8px;padding-left:2px}
+.empty{font-size:13px;color:var(--text3);padding:40px;text-align:center;border:0.5px dashed var(--border);border-radius:var(--radius-lg);background:var(--bg)}
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fchip{font-size:12px;padding:4px 10px;border-radius:20px;border:0.5px solid var(--border2);cursor:pointer;background:var(--bg);color:var(--text2);transition:all 0.12s;white-space:nowrap}
+.fchip:hover{border-color:var(--text3)}
+.badge-count{background:var(--bg2);border:0.5px solid var(--border);border-radius:20px;font-size:11px;padding:2px 8px;color:var(--text2)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:20px;width:min(500px,95vw);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{font-size:12px;color:var(--text2);display:block;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.report-section{background:var(--bg);border-radius:var(--radius-lg);border:0.5px solid var(--border);padding:14px 16px;margin-bottom:10px}
+.report-section h4{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px}
+.rtask{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--border)}
+.rtask:last-child{border-bottom:none}
+.chk{width:16px;height:16px;cursor:pointer;margin-top:1px;flex-shrink:0;accent-color:#1D9E75}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div>
+    <div class="app-title">タスク管理 & 日報 <span id="dateHeader"></span></div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('tasks')">タスク管理</button>
+  <button class="tab" onclick="switchTab('today')">今日のタスク</button>
+  <button class="tab" onclick="switchTab('report')">日報作成</button>
+</div>
+
+<!-- タスク管理 -->
+<div id="view-tasks" class="view active">
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openAddModal()">＋ タスク追加</button>
+    <select id="filterCat" onchange="renderTasks()"><option value="">全カテゴリ</option></select>
+    <select id="filterUrgent" onchange="renderTasks()">
+      <option value="">全て</option>
+      <option value="urgent">早急対応のみ</option>
+    </select>
+    <span class="badge-count" id="taskCount"></span>
+  </div>
+  <div class="filter-bar" id="filterBar"></div>
+  <div id="taskList"></div>
+</div>
+
+<!-- 今日のタスク -->
+<div id="view-today" class="view">
+  <div class="toolbar">
+    <span style="font-size:15px;font-weight:600">今日実行するタスク</span>
+    <span class="badge-count" id="todayCount"></span>
+  </div>
+  <p style="font-size:12px;color:var(--text3);margin-bottom:14px">タスク管理の「今日に追加」ボタンで追加できます</p>
+  <div id="todayList"></div>
+</div>
+
+<!-- 日報作成 -->
+<div id="view-report" class="view">
+  <div class="toolbar">
+    <span style="font-size:15px;font-weight:600">日報作成</span>
+    <input type="date" id="reportDate" style="margin-left:auto">
+    <button class="btn btn-primary" onclick="copyReport()">クリップボードにコピー</button>
+  </div>
+  <div class="report-section">
+    <h4>実行したタスク</h4>
+    <div id="reportTaskList"></div>
+  </div>
+  <div class="report-section">
+    <h4>コメント</h4>
+    <textarea id="reportComment" rows="3" placeholder="本日の所感・気づきなど"></textarea>
+  </div>
+  <div class="report-section">
+    <h4>次のアクション</h4>
+    <textarea id="reportNext" rows="3" placeholder="明日以降の予定・フォローアップ事項など"></textarea>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+    <button class="btn" onclick="previewReport()">プレビュー</button>
+    <button class="btn btn-primary" onclick="saveReport()">日報を保存</button>
+  </div>
+</div>
+</div>
+
+<!-- タスク追加/編集モーダル -->
+<div class="modal-bg" id="addModal">
+<div class="modal">
+  <h3 id="modalTitle">タスクを追加</h3>
+  <input type="hidden" id="editId">
+  <div class="field">
+    <label>タスク名 *</label>
+    <input type="text" id="fName" placeholder="タスク名を入力">
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label>カテゴリ *</label>
+      <select id="fCat"></select>
+    </div>
+    <div class="field">
+      <label>期限</label>
+      <input type="date" id="fDeadline">
+    </div>
+  </div>
+  <div class="field">
+    <label>タスク内容</label>
+    <textarea id="fContent" rows="3" placeholder="詳細・メモ"></textarea>
+  </div>
+  <div class="field" style="display:flex;align-items:center;gap:8px">
+    <input type="checkbox" id="fUrgent" style="width:16px;height:16px;cursor:pointer;accent-color:#E24B4A">
+    <label for="fUrgent" style="font-size:13px;cursor:pointer;color:var(--text)">早急対応</label>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" onclick="closeModal()">キャンセル</button>
+    <button class="btn btn-danger" id="deleteBtn" onclick="deleteTask()" style="display:none">削除</button>
+    <button class="btn btn-primary" onclick="saveTask()">保存</button>
+  </div>
+</div>
+</div>
+
+<!-- プレビューモーダル -->
+<div class="modal-bg" id="previewModal">
+<div class="modal">
+  <h3>日報プレビュー</h3>
+  <pre id="previewContent" style="font-size:13px;white-space:pre-wrap;background:var(--bg2);padding:1rem;border-radius:var(--radius);color:var(--text);line-height:1.7;max-height:400px;overflow-y:auto;font-family:var(--font)"></pre>
+  <div class="modal-footer">
+    <button class="btn" onclick="document.getElementById('previewModal').classList.remove('open')">閉じる</button>
+    <button class="btn btn-primary" onclick="copyReport()">コピー</button>
+  </div>
+</div>
+</div>
+
+<script>
+const CATS=[
+  {name:'新規製品',color:'#534AB7',bg:'#EEEDFE',text:'#3C3489'},
+  {name:'新規原料',color:'#0F6E56',bg:'#E1F5EE',text:'#085041'},
+  {name:'工場原料',color:'#185FA5',bg:'#E6F1FB',text:'#0C447C'},
+  {name:'工場工程',color:'#3B6D11',bg:'#EAF3DE',text:'#27500A'},
+  {name:'工場製品',color:'#BA7517',bg:'#FAEEDA',text:'#633806'},
+  {name:'工場トラブル',color:'#A32D2D',bg:'#FCEBEB',text:'#791F1F'},
+  {name:'営業対応',color:'#D4537E',bg:'#FBEAF0',text:'#72243E'},
+  {name:'SDS/ラベル',color:'#5F5E5A',bg:'#F1EFE8',text:'#2C2C2A'},
+  {name:'採用',color:'#1D9E75',bg:'#E1F5EE',text:'#085041'},
+  {name:'組合',color:'#7F77DD',bg:'#EEEDFE',text:'#26215C'},
+];
+
+let tasks=[];let nextId=1;let reportDone={};
+
+function catInfo(n){return CATS.find(c=>c.name===n)||{color:'#888',bg:'#eee',text:'#444'};}
+
+function init(){
+  const d=new Date();
+  document.getElementById('dateHeader').textContent=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+  document.getElementById('reportDate').value=d.toISOString().split('T')[0];
+  const sd=document.getElementById('fCat');
+  const sf=document.getElementById('filterCat');
+  const fb=document.getElementById('filterBar');
+  CATS.forEach(c=>{
+    [sd,sf].forEach(s=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;s.appendChild(o);});
+    const fc=document.createElement('button');
+    fc.className='fchip';fc.textContent=c.name;fc.dataset.cat=c.name;
+    fc.style.cssText=`border-color:${c.color}`;
+    fc.onclick=function(){
+      const on=this.classList.toggle('active');
+      this.style.cssText=on?`background:${c.bg};color:${c.text};border-color:${c.color}`:`border-color:${c.color}`;
+      renderTasks();
+    };
+    fb.appendChild(fc);
+  });
+  loadData();renderAll();
+}
+
+function renderAll(){renderTasks();renderToday();renderReport();}
+
+function getActiveCats(){return[...document.querySelectorAll('.fchip.active')].map(e=>e.dataset.cat);}
+
+function cardHTML(t){
+  const c=catInfo(t.cat);
+  const bl=t.urgent?'#E24B4A':c.color;
+  const urgB=t.urgent?'<span class="badge urgent-badge">早急</span>':'';
+  const todB=t.today?'<span class="badge today-badge">今日</span>':'';
+  const meta=t.deadline?`<span>期限: ${t.deadline}</span>`:'';
+  return`<div class="card" style="border-left:3px solid ${bl}${t.urgent?';background:#fff8f8':''}" onclick="openEditModal(${t.id})">
+  <div class="card-header">
+    <div class="dot" style="background:${t.today?'#1D9E75':'var(--border2)'};margin-top:2px"></div>
+    <span class="card-name">${escHtml(t.name)}</span>
+    ${urgB}
+    <span class="cat-badge" style="background:${c.bg};color:${c.text}">${t.cat}</span>
+    ${todB}
+  </div>
+  ${t.content?`<div class="card-body">${escHtml(t.content.substring(0,70))}${t.content.length>70?'...':''}</div>`:''}
+  <div class="card-meta">
+    ${meta}
+    <button class="today-link${t.today?' active':''}" onclick="event.stopPropagation();toggleToday(${t.id})">${t.today?'● 今日から外す':'○ 今日に追加'}</button>
+  </div>
+</div>`;
+}
+
+function renderTasks(){
+  const el=document.getElementById('taskList');
+  const fc=document.getElementById('filterCat').value;
+  const fu=document.getElementById('filterUrgent').value;
+  const acs=getActiveCats();
+  let fl=tasks.filter(t=>{
+    if(fc&&t.cat!==fc)return false;
+    if(fu==='urgent'&&!t.urgent)return false;
+    if(acs.length&&!acs.includes(t.cat))return false;
+    return true;
+  });
+  document.getElementById('taskCount').textContent=fl.length+'件';
+  if(!fl.length){el.innerHTML='<div class="empty">タスクがありません</div>';return;}
+  const urg=fl.filter(t=>t.urgent);
+  const nor=fl.filter(t=>!t.urgent);
+  let h='';
+  if(urg.length)h+='<div class="section-label">早急対応</div>'+urg.map(cardHTML).join('');
+  if(nor.length)h+=(urg.length?'<div class="section-label">通常タスク</div>':'')+nor.map(cardHTML).join('');
+  el.innerHTML=h;
+}
+
+function renderToday(){
+  const el=document.getElementById('todayList');
+  const tl=tasks.filter(t=>t.today);
+  document.getElementById('todayCount').textContent=tl.length+'件';
+  el.innerHTML=tl.length?tl.map(cardHTML).join(''):'<div class="empty">今日のタスクがありません</div>';
+}
+
+function renderReport(){
+  const el=document.getElementById('reportTaskList');
+  const tl=tasks.filter(t=>t.today);
+  if(!tl.length){el.innerHTML='<p style="font-size:13px;color:var(--text3)">今日のタスクがありません</p>';return;}
+  el.innerHTML=tl.map(t=>{
+    const c=catInfo(t.cat);
+    const done=reportDone[t.id]||false;
+    return`<div class="rtask">
+      <input type="checkbox" class="chk" ${done?'checked':''} onchange="reportDone[${t.id}]=this.checked">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;${done?'text-decoration:line-through;opacity:0.4':''}">${escHtml(t.name)}</div>
+        <span class="cat-badge" style="background:${c.bg};color:${c.text};font-size:11px;padding:1px 8px;border-radius:20px">${t.cat}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleToday(id){
+  const t=tasks.find(t=>t.id===id);if(t)t.today=!t.today;
+  saveData();renderAll();
+}
+
+function openAddModal(){
+  document.getElementById('modalTitle').textContent='タスクを追加';
+  document.getElementById('editId').value='';
+  document.getElementById('fName').value='';
+  document.getElementById('fCat').value=CATS[0].name;
+  document.getElementById('fDeadline').value='';
+  document.getElementById('fContent').value='';
+  document.getElementById('fUrgent').checked=false;
+  document.getElementById('deleteBtn').style.display='none';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEditModal(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  document.getElementById('modalTitle').textContent='タスクを編集';
+  document.getElementById('editId').value=id;
+  document.getElementById('fName').value=t.name;
+  document.getElementById('fCat').value=t.cat;
+  document.getElementById('fDeadline').value=t.deadline||'';
+  document.getElementById('fContent').value=t.content||'';
+  document.getElementById('fUrgent').checked=t.urgent||false;
+  document.getElementById('deleteBtn').style.display='inline-block';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('addModal').classList.remove('open');}
+
+function saveTask(){
+  const name=document.getElementById('fName').value.trim();
+  if(!name){alert('タスク名を入力してください');return;}
+  const id=document.getElementById('editId').value;
+  const data={name,cat:document.getElementById('fCat').value,deadline:document.getElementById('fDeadline').value,content:document.getElementById('fContent').value,urgent:document.getElementById('fUrgent').checked};
+  if(id){const t=tasks.find(t=>t.id==id);if(t)Object.assign(t,data);}
+  else tasks.push({id:nextId++,today:false,...data});
+  saveData();closeModal();renderAll();
+}
+
+function deleteTask(){
+  const id=document.getElementById('editId').value;if(!id)return;
+  if(!confirm('このタスクを削除しますか？'))return;
+  tasks=tasks.filter(t=>t.id!=id);
+  saveData();closeModal();renderAll();
+}
+
+function buildReport(){
+  const date=document.getElementById('reportDate').value;
+  const tl=tasks.filter(t=>t.today);
+  const done=tl.filter(t=>reportDone[t.id]);
+  const notDone=tl.filter(t=>!reportDone[t.id]);
+  const comment=document.getElementById('reportComment').value;
+  const next=document.getElementById('reportNext').value;
+  let txt=`【日報】${date}\n\n■ 実行したタスク\n`;
+  if(done.length)done.forEach(t=>{txt+=`  ✓ [${t.cat}] ${t.name}\n`;});
+  else txt+='  (なし)\n';
+  if(notDone.length){txt+=`\n■ 未完了タスク\n`;notDone.forEach(t=>{txt+=`  ○ [${t.cat}] ${t.name}\n`;});}
+  txt+=`\n■ コメント\n${comment||'(なし)'}\n\n■ 次のアクション\n${next||'(なし)'}`;
+  return txt;
+}
+
+function previewReport(){
+  document.getElementById('previewContent').textContent=buildReport();
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function copyReport(){
+  const txt=buildReport();
+  navigator.clipboard.writeText(txt).then(()=>alert('クリップボードにコピーしました')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('コピーしました');
+  });
+}
+
+function saveReport(){
+  const date=document.getElementById('reportDate').value;
+  try{localStorage.setItem('report_'+date,buildReport());alert(`${date} の日報を保存しました`);}
+  catch(e){alert('保存できませんでした');}
+}
+
+function saveData(){
+  try{localStorage.setItem('tasks_v1',JSON.stringify({tasks,nextId}));}catch(e){}
+}
+
+function loadData(){
+  try{
+    const d=JSON.parse(localStorage.getItem('tasks_v1')||'null');
+    if(d){tasks=d.tasks||[];nextId=d.nextId||1;}
+  }catch(e){}
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['tasks','today','report'][i]===tab);});
+  document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('active',v.id==='view-'+tab);});
+  if(tab==='today')renderToday();
+  if(tab==='report')renderReport();
+}
+
+function escHtml(s){const d=document.createElement('div');d.appendChild(document.createTextNode(s));return d.innerHTML;}
+
+document.getElementById('addModal').onclick=function(e){if(e.target===this)closeModal();};
+document.getElementById('previewModal').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+
+init();
+</script>
+</body>
+</html>
