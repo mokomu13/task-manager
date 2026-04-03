@@ -231,10 +231,15 @@ let unsubscribe = null;
 const msg = document.getElementById('loginMsg');
 msg.textContent = 'ログイン状態を確認中...';
 getRedirectResult(auth).then(result => {
+  if(result && result.user) {
+    // ログイン成功 - onAuthStateChanged が処理する
+  }
   msg.textContent = '';
 }).catch(e => {
   console.error(e);
-  msg.textContent = 'エラー: ' + e.code;
+  if(e.code !== 'auth/null-user') {
+    msg.textContent = 'エラー: ' + e.code;
+  }
 });
 
 window.signInWithGoogle = async () => {
