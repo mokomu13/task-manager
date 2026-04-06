@@ -209,7 +209,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const firebaseConfig={apiKey:"AIzaSyAMM0DmX4ycsr9NXNkj17CNwPEpYFj26cU",authDomain:"task-manager-a5639.firebaseapp.com",projectId:"task-manager-a5639",storageBucket:"task-manager-a5639.firebasestorage.app",messagingSenderId:"772541004929",appId:"1:772541004929:web:7a37ab80c8fa2d5e55e180"};
 const fbApp=initializeApp(firebaseConfig);const auth=getAuth(fbApp);const db=getFirestore(fbApp);const provider=new GoogleAuthProvider();let unsubscribe=null;
-window.signInWithGoogle=async()=>{const btn=document.getElementById('loginBtn');const msg=document.getElementById('loginMsg');btn.disabled=true;try{await signInWithPopup(auth,provider);}catch(e){msg.textContent='エラー: '+e.message;btn.disabled=false;}};
+window.signInWithGoogle=async()=>{const btn=document.getElementById('loginBtn');const msg=document.getElementById('loginMsg');btn.disabled=true;try { await signInWithRedirect(auth, provider); }catch(e){msg.textContent='エラー: '+e.message;btn.disabled=false;}};
 window.signOut=async()=>{if(unsubscribe)unsubscribe();await fbSignOut(auth);};
 window.saveTaskToDb=async(data)=>{if(!auth.currentUser)return;setSyncing(true);const id=data.id||crypto.randomUUID();await setDoc(doc(db,'users',auth.currentUser.uid,'tasks',id),{...data,id,subtasks:data.subtasks||[],createdAt:data.createdAt||Date.now(),updatedAt:Date.now()});};
 window.deleteTaskFromDb=async(id)=>{if(!auth.currentUser)return;setSyncing(true);await deleteDoc(doc(db,'users',auth.currentUser.uid,'tasks',id));};
