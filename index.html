@@ -349,7 +349,16 @@ function buildReport(){
 }
 window.previewReport=()=>{document.getElementById('previewContent').textContent=buildReport();document.getElementById('previewModal').classList.add('open');};
 window.copyReport=()=>{const txt=buildReport();navigator.clipboard.writeText(txt).then(()=>alert('クリップボードにコピーしました')).catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('コピーしました');});};
-window.saveReport=()=>{const date=document.getElementById('reportDate').value;try{localStorage.setItem('report_'+date,buildReport());alert(`${date} の日報を保存しました`);}catch(e){alert('保存できませんでした');}};
+window.saveReport=()=>{
+  const date=document.getElementById('reportDate').value;
+  const txt=buildReport();
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`日報_${date}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 window.switchTab=(tab)=>{
   document.querySelectorAll('.tab').forEach((t,i)=>{t.classList.toggle('active',['tasks','today','done','report'][i]===tab);});
   document.querySelectorAll('.view').forEach(v=>{v.classList.toggle('active',v.id==='view-'+tab);});
