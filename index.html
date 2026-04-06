@@ -242,7 +242,7 @@ window.saveTaskToDb = async (data) => {
   setSyncing(true);
   const id = data.id || crypto.randomUUID();
   await setDoc(doc(db, 'users', auth.currentUser.uid, 'tasks', id), {
-    ...data, id, createdAt: data.createdAt||Date.now(), updatedAt: Date.now()
+    ...data, id, subtasks: data.subtasks||[], createdAt: data.createdAt||Date.now(), updatedAt: Date.now()
   });
 };
 
