@@ -236,6 +236,11 @@ function initUI(){
 function renderAll(){initUI();renderTasks();renderToday();renderDone();renderReport();}
 function getActiveCats(){return[...document.querySelectorAll('.fchip.active')].map(e=>e.dataset.cat);}
 window.toggleExpand=(id)=>{expandedTasks[id]=!expandedTasks[id];renderTasks();};
+
+window.toggleTaskToday=async(taskId)=>{
+  const t=tasks.find(t=>t.id===taskId);if(!t)return;
+  await saveTaskToDb({...t,todayTask:!t.todayTask});
+};
 window.toggleTaskDone=async(taskId,e)=>{
   e.stopPropagation();
   const t=tasks.find(t=>t.id===taskId);if(!t)return;
@@ -269,7 +274,9 @@ function taskCardHTML(t,showSubAdd=true){
     <span class="cat-badge" style="background:${c.bg};color:${c.text}">${escHtml(t.cat)}</span>
     ${subs.length?`<span class="subtask-count">${doneSubs.length}/${subs.length}</span>`:''}
     ${todaySubs.length&&!t.completed?`<span class="badge today-badge">今日 ${todaySubs.length}件</span>`:''}
-    <button class="btn btn-sm" style="margin-left:auto;font-size:11px" onclick="event.stopPropagation();openEditModal('${t.id}')">編集</button>
+    <button class="btn btn-sm" style="margin-left:auto;font-size:11px" onclick="event.stopPropagation();openEditModal('${t.id}')">編集</button>${todaySubs.length&&!isCompleted?`<span class="badge today-badge">今日 ${todaySubs.length}件</span>`:''}
+    <button class="btn btn-sm${t.todayTask?' on':''}" style="margin-left:auto;font-size:11px;${t.todayTask?'border-color:#1D9E75;color:#1D9E75':''}" onclick="event.stopPropagation();toggleTaskToday('${t.id}')">${t.todayTask?'● 今日':'○ 今日'}</button>
+    <button class="btn btn-sm" style="font-size:11px" onclick="event.stopPropagation();openEditModal('${t.id}')">編集</button>
   </div>
   ${t.deadline||t.content?`<div class="task-meta">${t.deadline?`<span>期限: ${t.deadline}</span>`:''}${t.content?`<span style="color:var(--text2)">${escHtml(t.content.substring(0,60))}${t.content.length>60?'...':''}</span>`:''}</div>`:''}
   <div class="subtasks${isExpanded?' open':''}">${subsHTML}</div>
@@ -296,7 +303,11 @@ function renderDone(){
 }
 function getTodayItems(){
   const items=[];
-  tasks.forEach(t=>{if(t.completed)return;const subs=(t.subtasks||[]).map((s,i)=>({...s,realIdx:i})).filter(s=>s.today);if(subs.length)items.push({task:t,subs});});
+  tasks.forEach(t=>{
+    if(t.completed) return;
+    const subs=(t.subtasks||[]).map((s,i)=>({...s,realIdx:i})).filter(s=>s.today);
+    if(t.todayTask||subs.length)items.push({task:t,subs,taskOnly:t.todayTask&&!subs.length});
+  });
   return items;
 }
 function renderToday(){
@@ -318,10 +329,23 @@ function renderReport(){
   const el=document.getElementById('reportTaskList');if(!el)return;
   const items=getTodayItems();
   if(!items.length){el.innerHTML='<p style="font-size:13px;color:var(--text3)">今日のタスクがありません</p>';return;}
-  el.innerHTML=items.map(({task:t,subs})=>{
+  el.innerHTML=items.map(({task:t,subs,taskOnly})=>{
     const c=catInfo(t.cat);
-    const subsHTML=subs.map(s=>{const key=t.id+'-'+s.realIdx;const done=reportDone[key]||false;return`<div class="rsubtask"><input type="checkbox" class="chk" style="width:14px;height:14px;accent-color:#1D9E75" ${done?'checked':''} onchange="reportDone['${key}']=this.checked"><span style="font-size:13px;${done?'text-decoration:line-through;opacity:0.4':''}">${escHtml(s.name)}</span></div>`;}).join('');
-    return`<div class="rtask"><div class="rtask-header"><span style="font-size:13px;font-weight:500">${escHtml(t.name)}</span><span class="cat-badge" style="background:${c.bg};color:${c.text};font-size:11px">${escHtml(t.cat)}</span></div>${subsHTML}</div>`;
+    const bl=t.urgent?'#E24B4A':c.color;
+    const subsHTML=subs.map(s=>`<div class="subtask-item" onclick="toggleSubDone('${t.id}',${s.realIdx})">
+      <input type="checkbox" style="width:14px;height:14px;accent-color:#1D9E75;flex-shrink:0;cursor:pointer" ${s.done?'checked':''} onclick="event.stopPropagation();toggleSubDone('${t.id}',${s.realIdx})">
+      <span class="subtask-name${s.done?' subtask-done':''}">${escHtml(s.name)}</span>
+      <button class="subtask-today on" onclick="event.stopPropagation();toggleSubToday('${t.id}',${s.realIdx})">● 今日から外す</button>
+    </div>`).join('');
+    return`<div class="task-card" style="border-left:3px solid ${bl}">
+      <div class="task-card-header" style="cursor:default">
+        <input type="checkbox" style="width:16px;height:16px;accent-color:#1D9E75;flex-shrink:0;cursor:pointer" ${t.completed?'checked':''} onclick="toggleTaskDone('${t.id}')">
+        <span class="task-name${t.completed?' done':''}">${escHtml(t.name)}</span>
+        <span class="cat-badge" style="background:${c.bg};color:${c.text}">${escHtml(t.cat)}</span>
+        <button class="subtask-today on" style="margin-left:auto" onclick="toggleTaskToday('${t.id}')">● 今日から外す</button>
+      </div>
+      ${subs.length?`<div class="subtasks open">${subsHTML}</div>`:''}
+    </div>`;
   }).join('');
 }
 window.openAddModal=()=>{initUI();document.getElementById('modalTitle').textContent='大タスクを追加';document.getElementById('editId').value='';document.getElementById('fName').value='';document.getElementById('fCat').value=CATS[0].name;document.getElementById('fDeadline').value='';document.getElementById('fContent').value='';document.getElementById('fUrgent').checked=false;document.getElementById('fCompleted').checked=false;document.getElementById('deleteBtn').style.display='none';document.getElementById('addModal').classList.add('open');};
