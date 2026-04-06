@@ -205,7 +205,7 @@ textarea{resize:vertical;width:100%}
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut as fbSignOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const firebaseConfig={apiKey:"AIzaSyAMM0DmX4ycsr9NXNkj17CNwPEpYFj26cU",authDomain:"task-manager-a5639.firebaseapp.com",projectId:"task-manager-a5639",storageBucket:"task-manager-a5639.firebasestorage.app",messagingSenderId:"772541004929",appId:"1:772541004929:web:7a37ab80c8fa2d5e55e180"};
 const fbApp=initializeApp(firebaseConfig);const auth=getAuth(fbApp);const db=getFirestore(fbApp);const provider=new GoogleAuthProvider();let unsubscribe=null;
